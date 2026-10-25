@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
         - name: comms-proxy
-          image: ghcr.io/gofreego/comms-proxy:latest
+          image: ghcr.io/gofreego/comms-proxy:pilot-3bcdfbb
           imagePullPolicy: Always
           command:
             - /app/application
