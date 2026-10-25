@@ -1,0 +1,71 @@
+syntax = "proto3";
+package commsproxy_v1;
+
+import "google/api/annotations.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
+import "proto/commsproxy_v1/notification.proto";
+option go_package = "./commsproxy_v1";
+
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+    info: {
+        title: "comms-proxy";
+        version: "1.0";
+        description: "Sends notifications over one or more channels (in-app today; push, SMS, WhatsApp and email later) and serves each user's in-app inbox.";
+    };
+};
+
+// Notifier is for other services, inside the cluster. It has no HTTP routes, so it can't be
+// reached through the gateway.
+service Notifier {
+    // Send delivers one notification to its recipients on each requested channel. A channel
+    // that's unavailable or fails is reported in its result rather than failing the call.
+    rpc Send (SendRequest) returns (SendResponse);
+}
+
+// Inbox is the caller's in-app notifications, reached through the gateway; the profile comes
+// from the gateway's X-Profile-Id / X-Profile-Ids headers.
+service Inbox {
+    rpc ListNotifications (ListNotificationsRequest) returns (ListNotificationsResponse) {
+        option (google.api.http) = {
+            get: "/comms-proxy/v1/notifications"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Inbox"
+            summary: "List my notifications"
+            description: "Newest first, with the unread count."
+        };
+    }
+
+    rpc GetUnreadCount (GetUnreadCountRequest) returns (GetUnreadCountResponse) {
+        option (google.api.http) = {
+            get: "/comms-proxy/v1/notifications/unread-count"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Inbox"
+            summary: "Count my unread notifications"
+        };
+    }
+
+    rpc MarkNotificationRead (MarkNotificationReadRequest) returns (MarkReadResponse) {
+        option (google.api.http) = {
+            post: "/comms-proxy/v1/notifications/{id}/read"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Inbox"
+            summary: "Mark a notification read"
+            description: "No-op if it's already read. NOT_FOUND unless it's the caller's."
+        };
+    }
+
+    rpc MarkAllNotificationsRead (MarkAllNotificationsReadRequest) returns (MarkReadResponse) {
+        option (google.api.http) = {
+            post: "/comms-proxy/v1/notifications/read-all"
+            body: "*"
+        };
+        option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_operation) = {
+            tags: "Inbox"
+            summary: "Mark all my notifications read"
+        };
+    }
+}

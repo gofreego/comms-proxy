@@ -1,0 +1,15 @@
+# Applies resources/migrations with sql-migrator (`make migrate`). Fill in the connection
+# locally; don't commit credentials.
+Repository:
+  Name: Postgres
+  Postgres:
+    primary:
+      Host: "localhost"
+      Port: 5432
+      Username: "postgres"
+      Password: ""
+      DBName: "comms_proxy"
+      SSLMode: "disable"
+Migrator:
+  Path: "./resources/migrations/postgresql"
+  Action: up

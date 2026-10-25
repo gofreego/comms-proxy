@@ -1,0 +1,377 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "comms-proxy",
+    "description": "Sends notifications over one or more channels (in-app today; push, SMS, WhatsApp and email later) and serves each user's in-app inbox.",
+    "version": "1.0"
+  },
+  "tags": [
+    {
+      "name": "Notifier"
+    },
+    {
+      "name": "Inbox"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/comms-proxy/v1/notifications": {
+      "get": {
+        "summary": "List my notifications",
+        "description": "Newest first, with the unread count.",
+        "operationId": "Inbox_ListNotifications",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/commsproxy_v1ListNotificationsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "app",
+            "description": "empty: the server's default app",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "description": "0 means 20",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "unreadOnly",
+            "in": "query",
+            "required": false,
+            "type": "boolean"
+          }
+        ],
+        "tags": [
+          "Inbox"
+        ]
+      }
+    },
+    "/comms-proxy/v1/notifications/read-all": {
+      "post": {
+        "summary": "Mark all my notifications read",
+        "operationId": "Inbox_MarkAllNotificationsRead",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/commsproxy_v1MarkReadResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/commsproxy_v1MarkAllNotificationsReadRequest"
+            }
+          }
+        ],
+        "tags": [
+          "Inbox"
+        ]
+      }
+    },
+    "/comms-proxy/v1/notifications/unread-count": {
+      "get": {
+        "summary": "Count my unread notifications",
+        "operationId": "Inbox_GetUnreadCount",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/commsproxy_v1GetUnreadCountResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "app",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "Inbox"
+        ]
+      }
+    },
+    "/comms-proxy/v1/notifications/{id}/read": {
+      "post": {
+        "summary": "Mark a notification read",
+        "description": "No-op if it's already read. NOT_FOUND unless it's the caller's.",
+        "operationId": "Inbox_MarkNotificationRead",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/commsproxy_v1MarkReadResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/InboxMarkNotificationReadBody"
+            }
+          }
+        ],
+        "tags": [
+          "Inbox"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "InboxMarkNotificationReadBody": {
+      "type": "object"
+    },
+    "commsproxy_v1Channel": {
+      "type": "string",
+      "enum": [
+        "CHANNEL_UNSPECIFIED",
+        "IN_APP",
+        "PUSH",
+        "SMS",
+        "WHATSAPP",
+        "EMAIL"
+      ],
+      "default": "CHANNEL_UNSPECIFIED",
+      "description": "Channel is a medium a notification can go out on. Only IN_APP is delivered today; the others\nare reserved so callers can already ask for them (they're reported as unavailable).\n\n - IN_APP: stored in the recipient's inbox, read in the app"
+    },
+    "commsproxy_v1ChannelResult": {
+      "type": "object",
+      "properties": {
+        "channel": {
+          "$ref": "#/definitions/commsproxy_v1Channel"
+        },
+        "sent": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "skipped": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "failed": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "error": {
+          "type": "string",
+          "title": "set when the channel failed or isn't available"
+        }
+      },
+      "description": "ChannelResult is how one channel did. Recipients are counted once each: sent, skipped\n(nothing to reach them by on this channel, or a duplicate) or failed."
+    },
+    "commsproxy_v1GetUnreadCountResponse": {
+      "type": "object",
+      "properties": {
+        "unreadCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "commsproxy_v1InAppNotification": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "link": {
+          "type": "string"
+        },
+        "imageUrl": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "int64",
+          "title": "unix millis"
+        },
+        "readAt": {
+          "type": "string",
+          "format": "int64",
+          "title": "unix millis; 0 while unread"
+        }
+      }
+    },
+    "commsproxy_v1ListNotificationsResponse": {
+      "type": "object",
+      "properties": {
+        "notifications": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/commsproxy_v1InAppNotification"
+          },
+          "title": "newest first"
+        },
+        "unreadCount": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "commsproxy_v1MarkAllNotificationsReadRequest": {
+      "type": "object",
+      "properties": {
+        "app": {
+          "type": "string"
+        }
+      }
+    },
+    "commsproxy_v1MarkReadResponse": {
+      "type": "object",
+      "properties": {
+        "unreadCount": {
+          "type": "integer",
+          "format": "int32",
+          "title": "what's left unread"
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "commsproxy_v1Recipient": {
+      "type": "object",
+      "properties": {
+        "profileId": {
+          "type": "string",
+          "format": "int64"
+        },
+        "phone": {
+          "type": "string",
+          "title": "E.164, e.g. +919812345678"
+        },
+        "email": {
+          "type": "string"
+        }
+      },
+      "description": "Recipient is who a notification is for. Each channel uses the field it needs: IN_APP the\nprofile id; SMS/WHATSAPP the phone; EMAIL the email. A recipient missing a channel's field is\nskipped on that channel."
+    },
+    "commsproxy_v1SendResponse": {
+      "type": "object",
+      "properties": {
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/commsproxy_v1ChannelResult"
+          }
+        },
+        "message": {
+          "type": "string"
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    }
+  }
+}

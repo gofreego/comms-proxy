@@ -1,0 +1,111 @@
+syntax = "proto3";
+package commsproxy_v1;
+
+import "validate/validate.proto";
+option go_package = "./commsproxy_v1";
+
+// Channel is a medium a notification can go out on. Only IN_APP is delivered today; the others
+// are reserved so callers can already ask for them (they're reported as unavailable).
+enum Channel {
+    CHANNEL_UNSPECIFIED = 0;
+    IN_APP = 1;   // stored in the recipient's inbox, read in the app
+    PUSH = 2;
+    SMS = 3;
+    WHATSAPP = 4;
+    EMAIL = 5;
+}
+
+// Recipient is who a notification is for. Each channel uses the field it needs: IN_APP the
+// profile id; SMS/WHATSAPP the phone; EMAIL the email. A recipient missing a channel's field is
+// skipped on that channel.
+message Recipient {
+    int64 profileId = 1;
+    string phone = 2;   // E.164, e.g. +919812345678
+    string email = 3;
+}
+
+// ---------- Notifier (internal, gRPC only) ----------
+
+message SendRequest {
+    // The product sending it (e.g. "zshala"); inboxes are kept per app.
+    string app = 1 [(validate.rules).string = {min_len: 1, max_len: 50}];
+    // What kind of notification this is, e.g. "group.quiz_scheduled". Lets inboxes group or
+    // filter them, and later lets people opt out per category.
+    string category = 2 [(validate.rules).string = {min_len: 1, max_len: 100}];
+    repeated Recipient recipients = 3 [(validate.rules).repeated = {min_items: 1, max_items: 1000}];
+    repeated Channel channels = 4 [(validate.rules).repeated = {min_items: 1, items: {enum: {defined_only: true, not_in: [0]}}}];
+    string title = 5 [(validate.rules).string = {min_len: 1, max_len: 200}];
+    string body = 6 [(validate.rules).string.max_len = 1000];
+    // Where tapping it goes: an app route (e.g. "/community/quiz?id=…") or a URL.
+    string link = 7 [(validate.rules).string.max_len = 500];
+    string imageUrl = 8 [(validate.rules).string.max_len = 500];
+    // Free-form extras for the client.
+    map<string, string> data = 9;
+    // Optional. A recipient already sent a notification with this key (same app) isn't sent it
+    // again, so retries and repeated events don't duplicate.
+    string dedupKey = 10 [(validate.rules).string.max_len = 200];
+}
+
+// ChannelResult is how one channel did. Recipients are counted once each: sent, skipped
+// (nothing to reach them by on this channel, or a duplicate) or failed.
+message ChannelResult {
+    Channel channel = 1;
+    int32 sent = 2;
+    int32 skipped = 3;
+    int32 failed = 4;
+    string error = 5; // set when the channel failed or isn't available
+}
+
+message SendResponse {
+    repeated ChannelResult results = 1;
+    string message = 2;
+}
+
+// ---------- Inbox (the caller's in-app notifications) ----------
+
+message InAppNotification {
+    string id = 1;
+    string category = 2;
+    string title = 3;
+    string body = 4;
+    string link = 5;
+    string imageUrl = 6;
+    map<string, string> data = 7;
+    int64 createdAt = 8; // unix millis
+    int64 readAt = 9;    // unix millis; 0 while unread
+}
+
+message ListNotificationsRequest {
+    string app = 1 [(validate.rules).string.max_len = 50]; // empty: the server's default app
+    int32 limit = 2 [(validate.rules).int32 = {gte: 0, lte: 100}]; // 0 means 20
+    int32 offset = 3 [(validate.rules).int32.gte = 0];
+    bool unreadOnly = 4;
+}
+
+message ListNotificationsResponse {
+    repeated InAppNotification notifications = 1; // newest first
+    int32 unreadCount = 2;
+    string message = 3;
+}
+
+message GetUnreadCountRequest {
+    string app = 1 [(validate.rules).string.max_len = 50];
+}
+
+message GetUnreadCountResponse {
+    int32 unreadCount = 1;
+    string message = 2;
+}
+
+message MarkNotificationReadRequest {
+    string id = 1 [(validate.rules).string.uuid = true];
+}
+
+message MarkAllNotificationsReadRequest {
+    string app = 1 [(validate.rules).string.max_len = 50];
+}
+
+message MarkReadResponse {
+    int32 unreadCount = 1; // what's left unread
+    string message = 2;
+}

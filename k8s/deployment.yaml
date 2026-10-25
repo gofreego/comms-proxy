@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: comms-proxy
+  labels:
+    app: comms-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: comms-proxy
+  template:
+    metadata:
+      labels:
+        app: comms-proxy
+    spec:
+      containers:
+        - name: comms-proxy
+          image: ghcr.io/gofreego/comms-proxy:latest
+          imagePullPolicy: Always
+          command:
+            - /app/application
+          args:
+            - -env=prod
+            - -path=/etc/comms-proxy/config
+          ports:
+            - name: grpc
+              containerPort: 8081
+            - name: http
+              containerPort: 80
+          volumeMounts:
+            - name: config
+              mountPath: /etc/comms-proxy/config
+              readOnly: true
+          readinessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket:
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 250m
+              memory: 128Mi
+      volumes:
+        - name: config
+          secret:
+            # Created out-of-band from the private configs-prod repo (infra's
+            # comms-proxy-config-secret role), never from this repo.
+            secretName: comms-proxy-config

@@ -1,0 +1,20 @@
+version: v1
+plugins:
+  - plugin: go
+    out: ./
+
+  - plugin: go-grpc
+    out: ./
+
+  # No generate_unbound_methods: only RPCs with an explicit http option get an HTTP route, so
+  # the internal Notifier service stays gRPC-only.
+  - plugin: grpc-gateway
+    out: ./
+
+  - plugin: openapiv2
+    out: docs
+
+  - plugin: validate
+    out: ./
+    opt:
+      - lang=go

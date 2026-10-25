@@ -1,0 +1,31 @@
+LogConfig: true
+Logger:
+  AppName: comms-proxy
+  Build: dev
+  Level: debug
+ConfigReader:
+  Name: ""
+AppNames:
+- HTTP_SERVER
+- GRPC_SERVER
+Server:
+  GRPCPort: 8081
+  HTTPPort: 80
+  CORS:
+    Enabled: false
+Repository:
+  Postgres:
+    Host: "localhost"
+    Port: 5432
+    Username: "postgres"
+    Password: "" # set locally; production config lives in configs-prod
+    DBName: "comms_proxy"
+    SSLMode: "disable"
+    MaxOpenConns: 10
+    MaxIdleConns: 5
+    ConnMaxLifetime: 5m
+    ConnMaxIdleTime: 5m
+Service:
+  DefaultApp: zshala
+Debug:
+  Enabled: true
